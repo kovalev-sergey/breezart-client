@@ -5,24 +5,24 @@ let expect = require('chai').expect
 let Client = require('../index')
 const net = require('net')
 
-let server
+// let server
 
-server = net.createServer((socket) => {
-  // console.log('Client connected')
-  socket.on('error', (err) => {
-    if (err.code === 'ECONNRESET') return
-    throw err
-  })
+// server = net.createServer((socket) => {
+//   // console.log('Client connected')
+//   socket.on('error', (err) => {
+//     if (err.code === 'ECONNRESET') return
+//     throw err
+//   })
 
-  socket.on('data', (chunk) => {
-    console.log('Server receive:', chunk.toString())
-    socket.write(`OK\r\n`)
-    socket.end()
-    server.close()
-  })
+//   socket.on('data', (chunk) => {
+//     console.log('Server receive:', chunk.toString())
+//     socket.write(`OK\r\n`)
+//     socket.end()
+//     server.close()
+//   })
 
-  socket.write('/ #\r\n')
-})
+//   socket.write('/ #\r\n')
+// })
 
 describe('Options test', () => {
   it('Options must have an ip', () => {
@@ -30,12 +30,12 @@ describe('Options test', () => {
   })
 
   it('Options must have a port', () => {
-    var cl = new Client({ 'ip': '127.0.0.1' })
+    var cl = new Client({ 'ip': '127.0.0.1', 'password': 12345 })
     expect(cl).have.nested.property('options.port')
   })
 
   it('Adding custom property', () => {
-    let cl = new Client({ 'ip': '127.0.0.1', 'custom': true })
+    let cl = new Client({ 'ip': '127.0.0.1', 'password': 12345, 'custom': true })
     expect(cl).have.nested.property('options.custom')
     expect(cl.options.custom).have.to.be.equal(true)
   })
@@ -65,11 +65,13 @@ describe('Connection test', () => {
         server.close()
       })
 
-      socket.write('/ #\r\n')
+      socket.on('connection', () => {
+        socket.write('/ #\r\n')
+      })
     })
 
-    server.listen({ host: 'localhost', port: 1560 }, () => {
-      let cl = new Client({ 'ip': '127.0.0.1', 'password': 66 })
+    server.listen({ host: 'localhost', port: 15600 }, () => {
+      let cl = new Client({ 'ip': '127.0.0.1', 'port': 15600, 'password': 66 })
       cl.connect()
       cl.makeRequest(Client.RequestPrefix.STATE, null, (err, res) => {
         expect(err).have.to.be.equal(null)
@@ -105,11 +107,13 @@ describe('Connection test', () => {
         server.close()
       })
 
-      socket.write('/ #\r\n')
+      socket.on('connection', () => {
+        socket.write('/ #\r\n')
+      })
     })
 
-    server.listen({ host: 'localhost', port: 1560 }, () => {
-      let cl = new Client({ 'ip': '127.0.0.1', 'password': 66 })
+    server.listen({ host: 'localhost', port: 15600 }, () => {
+      let cl = new Client({ 'ip': '127.0.0.1', 'port': 15600, 'password': 66 })
       cl.connect()
 
       expect(cl.TempMin).have.to.be.equal(null)

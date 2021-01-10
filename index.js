@@ -1,13 +1,15 @@
 const net = require('net')
 const { decToHex, parceBits, hexToDecSign, hexToDec } = require('./util/hex')
 const queue = require('queue')
+const EventEmitter = require('events')
 
 const defaultOptions = {
   port: 1560
 }
 
-class BreezartClient {
+class BreezartClient extends EventEmitter {
   constructor (options) {
+    super()
     if (!(options || {}).ip) {
       throw new Error('IP address not set')
     }
@@ -98,10 +100,13 @@ class BreezartClient {
 
       this.commands.autostart = true
       this.commands.start(function (err, results) {
-        if (err) { throw err }
+        if (err) {
+          this.emit('error', err)
+        }
         // TODO: Implement correct error processing
         // console.log('all done:', results)
       })
+      this.emit('connect')
     })
     this.connection.on('close', () => {
       // console.log('connection closed')
@@ -113,6 +118,7 @@ class BreezartClient {
       console.log('Connection status: socket timeout')
     })
   }
+
   toString () {
     let obj = Object.assign({}, this)
     delete (obj.commands)
@@ -195,6 +201,7 @@ class BreezartClient {
   }
   disconnect () {
     this.connection.end()
+    this.emit('disconnect')
   }
   /**
     Get constant parameters of instance.

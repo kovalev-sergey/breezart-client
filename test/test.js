@@ -2,14 +2,22 @@ const Breezart = require('../index')
 
 let cl = new Breezart({ ip: '172.18.36.23', password: 28854 })
 
-cl.connect()
-
-cl.getProperties(() => {
-  console.log(cl.toString())
+cl.on('connect', () => {
+  cl.getProperties(() => {
+    console.log(cl.toString())
+    cl.disconnect()
+  })
 })
 
+cl.connect()
+
+// cl.getProperties(() => {
+//   console.log(cl.toString())
+// })
+
 // cl.getStatus(() => {
-//   // console.log(cl.toString())
+//   console.log(cl.toString())
+//   cl.disconnect()
 // })
 
 // cl.getSersorValues(() => {

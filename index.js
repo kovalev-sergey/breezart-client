@@ -99,7 +99,6 @@ class BreezartClient extends EventEmitter {
       this.processingResponseResult(err, null)
     })
 
-    // this.connection = new Telnet()
     this.connection = new net.Socket()
 
     this.connection.on('connect', () => {

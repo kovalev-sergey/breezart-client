@@ -1,4 +1,4 @@
-name: Test and Build
+name: Test
 
 on: [push, pull_request]
 
@@ -25,7 +25,7 @@ jobs:
       - name: Test the project
         run: npm test
 
-      - name: Build the project
-        run: npm run build
-        env:
-          CI: true
+      # - name: Build the project
+      #   run: npm run build
+      #   env:
+      #     CI: true

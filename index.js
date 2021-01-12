@@ -10,11 +10,11 @@ const defaultOptions = {
 class BreezartClient extends EventEmitter {
   constructor (options) {
     super()
-    if (!(options || {}).ip) {
-      throw new Error('IP address not set')
+    if (!(options || {}).host) {
+      throw new Error('Host is not set')
     }
     if (!(options || {}).password) {
-      throw new Error('Password not set')
+      throw new Error('Password is not set')
     }
     this.options = Object.assign(defaultOptions, options)
 
@@ -229,7 +229,7 @@ class BreezartClient extends EventEmitter {
   connect (connectionParams, attempts) {
     // Create connection and start queue requests processing
     const defParams = {
-      host: this.options.ip,
+      host: this.options.host,
       port: this.options.port
     }
     const params = Object.assign(defParams, connectionParams)

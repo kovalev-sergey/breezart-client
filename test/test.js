@@ -1,6 +1,6 @@
-const Breezart = require('../index')
+const BreezartClient = require('../index')
 
-let cl = new Breezart({ host: '172.18.36.23', password: 28854 })
+let cl = new BreezartClient({ host: '172.18.36.23', password: 28854 })
 
 cl.on('connect', () => {
   cl.getCurrentStatus(() => {

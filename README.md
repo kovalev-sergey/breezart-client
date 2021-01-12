@@ -1,3 +1,53 @@
 # breezart-client
 
-Work in Progress
+This module exports a class BreezartClient that implements remote control [Brezzart](http://breezart.ru/) Vents.
+
+This module implement a tcp/ip remote control of Brezzart Vents which has controllers like **JL204С5M**, **JL205**, **JL206** and a remote **TPD-283U-H**.
+
+For remote control using this module you must be able  to connect the Breezart remote **TPD-283U-H** to LAN, activate the remote control in it and set the password.
+
+## Example
+```js
+const BreezartClient = require('../index')
+
+let breezart = new BreezartClient({ host: '192.168.0.20', password: 12345 })
+
+breezart.on('connect', () => {
+  breezart.getCurrentStatus(() => {
+    console.log(cl.toString())
+    breezart.disconnect()
+  })
+})
+
+breezart.connect()
+```
+
+## Install
+`npm install breezart-client`
+
+## Test
+`npm test`
+
+## API
+```js
+let breezart = new BreezartClient([opts])
+```
+`opts` must contain inital values for:
+* `host` - host name or ip address
+* `password` - password of the Brezzart Vent
+* `port` - not neccessary. Default: 1560
+
+# Properties
+Properties include eponymous preperties described in the device [manual](http://breezart.ru/tech/breezart_smart_home.pdf) (rus)
+
+## Events
+`connect` - Emitted when a connection is successfully established.\
+`error` - Emitted when an error occurs.  \
+`timeout` - Emitted if a response has not been received within 3 seconds. This is only to notify. \
+`data` - Emitted when data is received. \
+`disconnect` - Emitted when an error occurs. \
+
+## License
+Copyright © 2018 Sergey Kovalev https://github.com/kovalev-sergey
+
+This work is free. You can redistribute it and/or modify it under the terms of the [MIT License](https://opensource.org/licenses/MIT). See LICENSE for full details.

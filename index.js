@@ -239,7 +239,7 @@ class BreezartClient extends EventEmitter {
     this.connection.once('error', () => {
       this.connection.end()
       setTimeout((t, a) => {
-        console.error('Connection failed: Reconnecting after', t / 1000, 'seconds')
+        this.emit('error', new Error(`Connection failed: Reconnecting after ${t / 1000} seconds`))
         this.connect(connectionParams, attempts)
       }, timeout, timeout, attempts++)
     })
@@ -508,7 +508,7 @@ class BreezartClient extends EventEmitter {
   parseResponseSetPower (response) {
     const requestType = BreezartClient.RequestPrefix.CHANGE_POWER
     if (response[0] !== 'OK' && response[1] !== requestType) {
-      console.error(`Incorrect response received form Breezart. Must be OK, but received: ${response[0]}`)
+      this.emit('error', new Error(`Incorrect response received form Breezart. Must be OK, but received: ${response[0]}`))
     }
   }
 }

@@ -25,17 +25,17 @@ const net = require('net')
 // })
 
 describe('Options test', () => {
-  it('Options must have an ip', () => {
-    expect(() => new Client()).to.throw('IP address not set')
+  it('Options must have an host', () => {
+    expect(() => new Client()).to.throw('Host is not set')
   })
 
   it('Options must have a port', () => {
-    var cl = new Client({ 'ip': '127.0.0.1', 'password': 12345 })
+    var cl = new Client({ 'host': '127.0.0.1', 'password': 12345 })
     expect(cl).have.nested.property('options.port')
   })
 
   it('Adding custom property', () => {
-    let cl = new Client({ 'ip': '127.0.0.1', 'password': 12345, 'custom': true })
+    let cl = new Client({ 'host': '127.0.0.1', 'password': 12345, 'custom': true })
     expect(cl).have.nested.property('options.custom')
     expect(cl.options.custom).have.to.be.equal(true)
   })
@@ -43,44 +43,13 @@ describe('Options test', () => {
 
 describe('Request construct test', () => {
   it('Check assections', () => {
-    let cl = new Client({ 'ip': '127.0.0.1', 'password': 65535 })
+    let cl = new Client({ 'host': '127.0.0.1', 'password': 65535 })
     let req = cl.constructRequest(Client.RequestPrefix.STATE, null)
     expect(req).have.to.be.equal('VSt07_ffff')
   })
 })
 
 describe('Connection test', () => {
-  it('makeRequest STATE', function (done) {
-    this.timeout(5000)
-
-    let server = net.createServer((socket) => {
-      socket.on('error', (err) => {
-        if (err.code === 'ECONNRESET') return
-        throw err
-      })
-
-      socket.on('data', (chunk) => {
-        socket.write(Client.RequestPrefix.STATE + '_OK')
-        socket.end()
-        server.close()
-      })
-
-      socket.on('connection', () => {
-        socket.write('/ #\r\n')
-      })
-    })
-
-    server.listen({ host: 'localhost', port: 15600 }, () => {
-      let cl = new Client({ 'ip': '127.0.0.1', 'port': 15600, 'password': 66 })
-      cl.connect()
-      cl.makeRequest(Client.RequestPrefix.STATE, null, (err, res) => {
-        expect(err).have.to.be.equal(null)
-        expect(res[0]).have.to.be.equal(Client.RequestPrefix.STATE)
-        done()
-      })
-    })
-  })
-
   it('makeRequest PROPERTIES', function (done) {
     this.timeout(5000)
 
@@ -113,33 +82,8 @@ describe('Connection test', () => {
     })
 
     server.listen({ host: 'localhost', port: 15600 }, () => {
-      let cl = new Client({ 'ip': '127.0.0.1', 'port': 15600, 'password': 66 })
-      cl.connect()
-
-      expect(cl.TempMin).have.to.be.equal(null)
-      expect(cl.TempMax).have.to.be.equal(null)
-      expect(cl.SpeedMin).have.to.be.equal(null)
-      expect(cl.SpeedMax).have.to.be.equal(null)
-      expect(cl.HumidMin).have.to.be.equal(null)
-      expect(cl.HumidMax).have.to.be.equal(null)
-
-      expect(cl.NVAVZone).have.to.be.equal(null)
-      expect(cl.VAVMode).have.to.be.equal(null)
-      expect(cl.IsRegPressVAV).have.to.be.equal(null)
-      expect(cl.IsShowHum).have.to.be.equal(null)
-      expect(cl.IsCascRegT).have.to.be.equal(null)
-      expect(cl.IsCascRegH).have.to.be.equal(null)
-      expect(cl.IsHumid).have.to.be.equal(null)
-      expect(cl.IsCooler).have.to.be.equal(null)
-      expect(cl.IsAuto).have.to.be.equal(null)
-
-      expect(cl.ProtSubVers).have.to.be.equal(null)
-      expect(cl.ProtVers).have.to.be.equal(null)
-      expect(cl.LoVerTPD).have.to.be.equal(null)
-      expect(cl.HiVerTPD).have.to.be.equal(null)
-      expect(cl.Firmware_Ver).have.to.be.equal(null)
-
-      cl.getProperties(() => {
+      let cl = new Client({ 'host': '127.0.0.1', 'port': 15600, 'password': 66 })
+      cl.on('connect', () => {
         expect(cl.TempMin).have.to.be.equal(6)
         expect(cl.TempMax).have.to.be.equal(44)
         expect(cl.SpeedMin).have.to.be.equal(6)
@@ -162,9 +106,80 @@ describe('Connection test', () => {
         expect(cl.LoVerTPD).have.to.be.equal(3)
         expect(cl.HiVerTPD).have.to.be.equal(253)
         expect(cl.Firmware_Ver).have.to.be.equal(60000)
-
+        cl.disconnect()
         done()
       })
+      cl.connect()
+    })
+  })
+})
+
+describe('Errors test', () => {
+  it('if returned error, shoul be emit error', function (done) {
+    this.timeout(5000)
+
+    // Response is array from `VPr07_bitTempr_bitSpeed_bitHumid_bitMisc_BitPrt_BitVerTPD_BitVerContr`
+    let propResponse = []
+    propResponse.push('VEPas')
+
+    let server = net.createServer((socket) => {
+      socket.on('error', (err) => {
+        if (err.code === 'ECONNRESET') return
+        throw err
+      })
+
+      socket.on('data', (chunk) => {
+        socket.write(propResponse.join(Client.DELIMITER))
+        socket.end()
+        server.close()
+      })
+
+      socket.on('connection', () => {
+        socket.write('/ #\r\n')
+      })
+    })
+
+    server.listen({ host: 'localhost', port: 15600 }, () => {
+      let cl = new Client({ 'host': '127.0.0.1', 'port': 15600, 'password': 66 })
+      cl.on('error', (err) => {
+        expect(err.message).have.to.be.equal(`${Client.ErrorPrefix.VEPas}, ${propResponse}`)
+        done()
+      })
+      cl.connect()
+    })
+  })
+  it('if returned error, shoul be emit error 2', function (done) {
+    this.timeout(5000)
+
+    // Response is array from `VPr07_bitTempr_bitSpeed_bitHumid_bitMisc_BitPrt_BitVerTPD_BitVerContr`
+    let propResponse = []
+    propResponse.push('VEDat')
+    propResponse.push('L2')
+
+    let server = net.createServer((socket) => {
+      socket.on('error', (err) => {
+        if (err.code === 'ECONNRESET') return
+        throw err
+      })
+
+      socket.on('data', (chunk) => {
+        socket.write(propResponse.join(Client.DELIMITER))
+        socket.end()
+        server.close()
+      })
+
+      socket.on('connection', () => {
+        socket.write('/ #\r\n')
+      })
+    })
+
+    server.listen({ host: 'localhost', port: 15600 }, () => {
+      let cl = new Client({ 'host': '127.0.0.1', 'port': 15600, 'password': 66 })
+      cl.on('error', (err) => {
+        expect(err.message).have.to.be.equal(`${Client.ErrorPrefix.VEDat}, ${propResponse}`)
+        done()
+      })
+      cl.connect()
     })
   })
 })

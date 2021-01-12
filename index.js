@@ -134,6 +134,10 @@ class BreezartClient extends EventEmitter {
     const response = result.response
     const callback = result.callback
     const requestType = response[0]
+    if (this.checkResponse(response)) {
+      callback()
+      return
+    }
     switch (requestType) {
       case BreezartClient.RequestPrefix.PROPERTIES:
         this.parseResponseProperties(response)
@@ -226,6 +230,7 @@ class BreezartClient extends EventEmitter {
       }
     })
   }
+
   connect (connectionParams, attempts) {
     // Create connection and start queue requests processing
     const defParams = {
@@ -246,6 +251,7 @@ class BreezartClient extends EventEmitter {
     console.debug('Connecting to Breezart...', params.host, params.port)
     this.connection.connect(params)
   }
+
   disconnect () {
     this.commands.autostart = false
     this.commands.stop()
@@ -253,6 +259,21 @@ class BreezartClient extends EventEmitter {
     this.connected = false
     this.emit('disconnect')
   }
+
+  /**
+   * Check response for error returned by instance
+   * @param {*} response
+   * @returns {boolean} `true` if has error
+   */
+  checkResponse (response) {
+    if (response[0] in BreezartClient.ErrorPrefix) {
+      const message = `${BreezartClient.ErrorPrefix[response[0]]}, ${response}`
+      this.emit('error', new Error(message))
+      return true
+    }
+    return false
+  }
+
   /**
     Get constant parameters of instance.
     Calling ones after connecting
@@ -563,10 +584,11 @@ BreezartClient.ErrorPrefix = {
   VEFrm: 'Wrong format of request', //  ошибка формата (слишком длинный или слишком короткий запрос, в запросе длиной более 5 символов нет разделителя «_»), Reqv – полученный запрос
   VECd1: 'Request of type 1 not found',
   VECd2: 'Request of type 2 not found',
-  VEDat_E: 'Error in variable',
-  VEDat_TM: 'Many variables (more than 17)',
-  VEDat_L: 'The value of the variable is less than the minimum allowed',
-  VEDat_H: 'The value of the variable is greater than the maximum allowed',
+  VEDat: 'Error in request data',
+  VEDat_E: 'Error in variable', // TODO: handle it
+  VEDat_TM: 'Many variables (more than 17)', // TODO: handle it
+  VEDat_L: 'The value of the variable is less than the minimum allowed', // TODO: handle it
+  VEDat_H: 'The value of the variable is greater than the maximum allowed', // TODO: handle it
   VECon: 'No connection with the ventilation unit',
   VECJL: 'No connection with the JL module (the remote of VAV)'
 }

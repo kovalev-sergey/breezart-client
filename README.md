@@ -6,6 +6,9 @@ This module implement a tcp/ip remote control of Brezzart Vents which has contro
 
 For remote control using this module you must be able  to connect the Breezart remote **TPD-283U-H** to LAN, activate the remote control in it and set the password.
 
+> **Disclaimer**\
+> Work in progress. New features will be implemented ASAP.
+
 ## Example
 ```js
 const BreezartClient = require('../index')

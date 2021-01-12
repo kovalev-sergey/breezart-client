@@ -272,6 +272,7 @@ class BreezartClient extends EventEmitter {
       return true
     }
     return false
+    // TODO: add checks of other responses (`BreezartClient.RequestPrefix`) and emit an error if the prefix is not found
   }
 
   /**

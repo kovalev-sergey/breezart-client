@@ -1,5 +1,4 @@
 {
-  "private": true,
   "name": "breezart-client",
   "version": "1.0.0",
   "description": "Module to remote control Breezart Vents",

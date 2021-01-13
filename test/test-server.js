@@ -1,7 +1,7 @@
 const net = require('net')
 
 const propResponse = function () {
-  let propResponse = []
+  const propResponse = []
   propResponse.push('VPr07')
   propResponse.push('2C06') // TempMin = 6, TempMax = 44 (0010 1100 0000 0110)
   propResponse.push('906') // SpeedMin = 6, SpeedMax = 9 (0000 1001 0000 0110)
@@ -14,7 +14,7 @@ const propResponse = function () {
 }
 
 const statsResponse = function () {
-  let statsResponse = []
+  const statsResponse = []
   statsResponse.push('VSt07')
   statsResponse.push('841') // bitState (0000 1000 0100 0001)
   statsResponse.push('2015') // bitMode (0010 0000 0001 0101)

@@ -1,8 +1,8 @@
 /* eslint-env mocha */
 process.env.NODE_ENV = 'test'
 
-let { decToHex, hexToDec, decToHexSign, hexToDecSign, parceBits } = require('../util/hex')
-let expect = require('chai').expect
+const { decToHex, hexToDec, decToHexSign, hexToDecSign, parceBits } = require('../util/hex')
+const expect = require('chai').expect
 
 describe('Check hex to dec to hex converting', () => {
   it('Dec for converting must be integer', () => {

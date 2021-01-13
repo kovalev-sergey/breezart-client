@@ -1,8 +1,8 @@
 /* eslint-env mocha */
 process.env.NODE_ENV = 'test'
 
-let expect = require('chai').expect
-let Client = require('../index')
+const expect = require('chai').expect
+const Client = require('../index')
 const net = require('net')
 
 // let server
@@ -30,12 +30,12 @@ describe('Options test', () => {
   })
 
   it('Options must have a port', () => {
-    var cl = new Client({ 'host': '127.0.0.1', 'password': 12345 })
+    const cl = new Client({ host: '127.0.0.1', password: 12345 })
     expect(cl).have.nested.property('options.port')
   })
 
   it('Adding custom property', () => {
-    let cl = new Client({ 'host': '127.0.0.1', 'password': 12345, 'custom': true })
+    const cl = new Client({ host: '127.0.0.1', password: 12345, custom: true })
     expect(cl).have.nested.property('options.custom')
     expect(cl.options.custom).have.to.be.equal(true)
   })
@@ -43,8 +43,8 @@ describe('Options test', () => {
 
 describe('Request construct test', () => {
   it('Check assections', () => {
-    let cl = new Client({ 'host': '127.0.0.1', 'password': 65535 })
-    let req = cl.constructRequest(Client.RequestPrefix.STATE, null)
+    const cl = new Client({ host: '127.0.0.1', password: 65535 })
+    const req = cl.constructRequest(Client.RequestPrefix.STATE, null)
     expect(req).have.to.be.equal('VSt07_ffff')
   })
 })
@@ -54,7 +54,7 @@ describe('Connection test', () => {
     this.timeout(5000)
 
     // Response is array from `VPr07_bitTempr_bitSpeed_bitHumid_bitMisc_BitPrt_BitVerTPD_BitVerContr`
-    let propResponse = []
+    const propResponse = []
     propResponse.push('VPr07')
     propResponse.push('2C06') // TempMin = 6, TempMax = 44 (0010 1100 0000 0110)
     propResponse.push('906') // SpeedMin = 6, SpeedMax = 9 (0000 1001 0000 0110)
@@ -64,7 +64,7 @@ describe('Connection test', () => {
     propResponse.push('FD03') // LoVerTPD = 3, HiVerTPD = 253 (1111 1101 0000 0011)
     propResponse.push('EA60') // Firmware_Ver = 60000 (1110 1010 0110 0000)
 
-    let server = net.createServer((socket) => {
+    const server = net.createServer((socket) => {
       socket.on('error', (err) => {
         if (err.code === 'ECONNRESET') return
         throw err
@@ -82,7 +82,7 @@ describe('Connection test', () => {
     })
 
     server.listen({ host: 'localhost', port: 15600 }, () => {
-      let cl = new Client({ 'host': '127.0.0.1', 'port': 15600, 'password': 66 })
+      const cl = new Client({ host: '127.0.0.1', port: 15600, password: 66 })
       cl.on('connect', () => {
         expect(cl.TempMin).have.to.be.equal(6)
         expect(cl.TempMax).have.to.be.equal(44)
@@ -119,10 +119,10 @@ describe('Errors test', () => {
     this.timeout(5000)
 
     // Response is array from `VPr07_bitTempr_bitSpeed_bitHumid_bitMisc_BitPrt_BitVerTPD_BitVerContr`
-    let propResponse = []
+    const propResponse = []
     propResponse.push('VEPas')
 
-    let server = net.createServer((socket) => {
+    const server = net.createServer((socket) => {
       socket.on('error', (err) => {
         if (err.code === 'ECONNRESET') return
         throw err
@@ -140,7 +140,7 @@ describe('Errors test', () => {
     })
 
     server.listen({ host: 'localhost', port: 15600 }, () => {
-      let cl = new Client({ 'host': '127.0.0.1', 'port': 15600, 'password': 66 })
+      const cl = new Client({ host: '127.0.0.1', port: 15600, password: 66 })
       cl.on('error', (err) => {
         expect(err.message).have.to.be.equal(`${Client.ErrorPrefix.VEPas}, ${propResponse}`)
         done()
@@ -152,11 +152,11 @@ describe('Errors test', () => {
     this.timeout(5000)
 
     // Response is array from `VPr07_bitTempr_bitSpeed_bitHumid_bitMisc_BitPrt_BitVerTPD_BitVerContr`
-    let propResponse = []
+    const propResponse = []
     propResponse.push('VEDat')
     propResponse.push('L2')
 
-    let server = net.createServer((socket) => {
+    const server = net.createServer((socket) => {
       socket.on('error', (err) => {
         if (err.code === 'ECONNRESET') return
         throw err
@@ -174,7 +174,7 @@ describe('Errors test', () => {
     })
 
     server.listen({ host: 'localhost', port: 15600 }, () => {
-      let cl = new Client({ 'host': '127.0.0.1', 'port': 15600, 'password': 66 })
+      const cl = new Client({ host: '127.0.0.1', port: 15600, password: 66 })
       cl.on('error', (err) => {
         expect(err.message).have.to.be.equal(`${Client.ErrorPrefix.VEDat}, ${propResponse}`)
         done()

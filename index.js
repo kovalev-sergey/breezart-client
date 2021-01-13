@@ -157,13 +157,14 @@ class BreezartClient extends EventEmitter {
   }
 
   toString () {
-    let obj = Object.assign({}, this)
+    const obj = Object.assign({}, this)
     delete (obj.commands)
     delete (obj.connection)
     return JSON.stringify(obj)
   }
+
   constructRequest (requestType, data) {
-    let req = []
+    const req = []
     // Construct request as requestType _ password
     req.push(requestType)
     req.push(decToHex(this.options.password))
@@ -172,6 +173,7 @@ class BreezartClient extends EventEmitter {
     }
     return req.join(BreezartClient.DELIMITER)
   }
+
   /**
    * Make a request by constructing it, creating a job, and placing it in the queue.
    * Response of that request should be catched in the queue notification about job results
@@ -206,11 +208,12 @@ class BreezartClient extends EventEmitter {
       // TODO: Need error handling
     })
   }
+
   send (req, cb) {
     this.connection.write(req, () => {
       let response = ''
       this.connection.on('data', sendHandler)
-      let timeout = setTimeout(() => {
+      const timeout = setTimeout(() => {
         if (response === '') {
           this.connection.removeListener('data', sendHandler)
           this.emit('timeout')
@@ -239,7 +242,7 @@ class BreezartClient extends EventEmitter {
     const params = Object.assign(defParams, connectionParams)
     // Calc timeout for next attempt
     attempts = (attempts || 0) < 8 ? (attempts || 0) : 8
-    let timeout = 1000 * Math.pow(2, attempts)
+    const timeout = 1000 * Math.pow(2, attempts)
     this.connection.once('error', () => {
       this.connection.end()
       setTimeout((t, a) => {
@@ -337,6 +340,7 @@ class BreezartClient extends EventEmitter {
     // BitVerContr
     this.Firmware_Ver = parceBits(response[7], 0, 15)
   }
+
   /**
     Get status variables of instance.
   */
@@ -470,7 +474,7 @@ class BreezartClient extends EventEmitter {
     Get sensor values of instance.
   */
   getSersorValues (callback) {
-    let requestType = BreezartClient.RequestPrefix.SENSORS
+    const requestType = BreezartClient.RequestPrefix.SENSORS
     this.makeRequest(requestType, null, callback)
   }
 
@@ -520,8 +524,8 @@ class BreezartClient extends EventEmitter {
         callback()
         return
       }
-      let requestType = BreezartClient.RequestPrefix.CHANGE_POWER
-      let data = BreezartClient.DataValues.POWER_ON
+      const requestType = BreezartClient.RequestPrefix.CHANGE_POWER
+      const data = BreezartClient.DataValues.POWER_ON
       this.makeRequest(requestType, data, callback)
     })
   }

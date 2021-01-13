@@ -35,7 +35,7 @@ exports.hexToDecSign = function (hex) {
 */
 exports.parceBits = function (input, from, to) {
   if (!to) to = from
-  let bits = parseInt(input, 16).toString(2).split('').reverse()
-  let val = bits.slice(from, to + 1).reverse().join('')
+  const bits = parseInt(input, 16).toString(2).split('').reverse()
+  const val = bits.slice(from, to + 1).reverse().join('')
   return parseInt(val, 2)
 }

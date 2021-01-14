@@ -176,7 +176,7 @@ describe('Errors test', () => {
     server.listen({ host: 'localhost', port: 15600 }, () => {
       const cl = new Client({ host: '127.0.0.1', port: 15600, password: 66 })
       cl.on('error', (err) => {
-        expect(err.message).have.to.be.equal(`${Client.ErrorPrefix.VEDat}, ${propResponse}`)
+        expect(err.message).have.to.be.equal(`${Client.ErrorPrefix.VEDat}, ${propResponse.join(Client.DELIMITER)}`)
         done()
       })
       cl.connect()

@@ -125,6 +125,12 @@ class BreezartClient extends EventEmitter {
     })
   }
 
+  /**
+   * Processing the result of the communication with the device.
+   * Calls on each command's queue 'success'
+   * @param {Error | null} error socket error
+   * @param {{request: String[]; response: String[]; callback: (error?: Error | null) => void}} result result of the communication with the device
+   */
   processingResponseResult (error, result) {
     if (error) {
       this.emit('error', error)
@@ -133,8 +139,11 @@ class BreezartClient extends EventEmitter {
     const response = result.response
     const callback = result.callback
     const requestType = response[0]
-    if (this.checkResponse(response)) {
-      callback()
+
+    const responseError = this.checkResponse(response)
+
+    if (responseError) {
+      callback(responseError)
       return
     }
     switch (requestType) {
@@ -153,7 +162,7 @@ class BreezartClient extends EventEmitter {
       default:
         break
     }
-    callback()
+    callback(null)
   }
 
   toString () {
@@ -179,6 +188,7 @@ class BreezartClient extends EventEmitter {
    * Response of that request should be catched in the queue notification about job results
    * @param {BreezartClient.RequestPrefix} requestType
    * @param {*} data
+   * @param {(error?: Error | null) => void} callback
    */
   makeRequest (requestType, data, callback) {
     const req = this.constructRequest(requestType, data)
@@ -264,22 +274,23 @@ class BreezartClient extends EventEmitter {
 
   /**
    * Check response for error returned by instance
-   * @param {*} response
-   * @returns {boolean} `true` if has error
+   * @param {String[]} response
+   * @returns {Error | null} if has error
    */
   checkResponse (response) {
     if (response[0] in BreezartClient.ErrorPrefix) {
-      const message = `${BreezartClient.ErrorPrefix[response[0]]}, ${response}`
-      this.emit('error', new Error(message))
-      return true
+      const error = new Error(`${BreezartClient.ErrorPrefix[response[0]]}, ${response.join(BreezartClient.DELIMITER)}`)
+      this.emit('error', error)
+      return error
     }
-    return false
+    return null
     // TODO: add checks of other responses (`BreezartClient.RequestPrefix`) and emit an error if the prefix is not found
   }
 
   /**
     Get constant parameters of instance.
     Calling ones after connecting
+    @param {(error?: Error | null) => void} callback
   */
   getProperties (callback) {
     const requestType = BreezartClient.RequestPrefix.PROPERTIES
@@ -343,6 +354,7 @@ class BreezartClient extends EventEmitter {
 
   /**
     Get status variables of instance.
+    @param {(error?: Error | null) => void} callback
   */
   getStatus (callback) {
     const requestType = BreezartClient.RequestPrefix.STATE
@@ -472,6 +484,7 @@ class BreezartClient extends EventEmitter {
 
   /**
     Get sensor values of instance.
+    @param {(error?: Error | null) => void} callback
   */
   getSersorValues (callback) {
     const requestType = BreezartClient.RequestPrefix.SENSORS
@@ -503,30 +516,39 @@ class BreezartClient extends EventEmitter {
 
   /**
    * Get status and sensor values of the instance
-   * @param {function} callback
+   * @param {(error?: Error | null) => void} callback
    */
   getCurrentStatus (callback) {
-    this.getStatus(() => {
-      this.getSersorValues(() => {
-        callback()
-      })
+    this.getStatus((error) => {
+      if (error) {
+        callback(error)
+      } else {
+        this.getSersorValues((error) => {
+          callback(error)
+        })
+      }
     })
   }
 
+  /**
+   * Turn on/off the device
+   * @param {BreezartClient.DataValues} power
+   * @param {(error?: Error | null) => void} callback
+   */
   setPower (power, callback) {
     // set power only after status are known
-    this.getStatus(() => {
-      if (power && (this.UnitState === 1 || this.UnitState === 3)) {
-        callback()
-        return
+    this.getStatus((error) => {
+      if (error) {
+        callback(error)
+      } else if (power && (this.UnitState === 1 || this.UnitState === 3)) {
+        callback(null)
+      } else if (!power && (this.UnitState === 0 || this.UnitState === 2)) {
+        callback(null)
+      } else {
+        const requestType = BreezartClient.RequestPrefix.CHANGE_POWER
+        const data = BreezartClient.DataValues.POWER_ON
+        this.makeRequest(requestType, data, callback)
       }
-      if (!power && (this.UnitState === 0 || this.UnitState === 2)) {
-        callback()
-        return
-      }
-      const requestType = BreezartClient.RequestPrefix.CHANGE_POWER
-      const data = BreezartClient.DataValues.POWER_ON
-      this.makeRequest(requestType, data, callback)
     })
   }
 

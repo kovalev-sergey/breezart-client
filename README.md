@@ -16,7 +16,7 @@ const BreezartClient = require('../index')
 let breezart = new BreezartClient({ host: '192.168.0.20', password: 12345 })
 
 breezart.on('connect', () => {
-  breezart.getCurrentStatus(() => {
+  breezart.getCurrentStatus((error) => {
     console.log(cl.toString())
     breezart.disconnect()
   })

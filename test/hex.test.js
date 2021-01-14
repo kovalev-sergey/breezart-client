@@ -35,5 +35,8 @@ describe('Check hex to dec to hex converting', () => {
     expect(parceBits('1f4c', 9)).have.to.be.equal(1)
     expect(parceBits('1f4c', 4)).have.to.be.equal(0)
     expect(parceBits('1f4c', 0, 15)).have.to.be.equal(8012)
+    expect(parceBits('0', 0, 15)).have.to.be.equal(0)
+    expect(parceBits('0', 0, 15)).have.to.be.equal(0)
+    expect(parceBits('0', 8, 15)).have.to.be.equal(0)
   })
 })

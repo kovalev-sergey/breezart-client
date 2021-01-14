@@ -118,6 +118,7 @@ class BreezartClient extends EventEmitter {
       this.commands.stop()
       this.connected = false
     })
+
     this.connection.on('timeout', () => {
       this.connected = false
       // console.debug('Connection status: socket timeout')
@@ -129,16 +130,17 @@ class BreezartClient extends EventEmitter {
    * Processing the result of the communication with the device.
    * Calls on each command's queue 'success'
    * @param {Error | null} error socket error
-   * @param {{request: String[]; response: String[]; callback: (error?: Error | null) => void}} result result of the communication with the device
+   * @param {{request: String; response: String[]; callback: (error?: Error | null, value?: number) => void}} result result of the communication with the device
    */
   processingResponseResult (error, result) {
     if (error) {
       this.emit('error', error)
       return
     }
+    const request = result.request
     const response = result.response
     const callback = result.callback
-    const requestType = response[0]
+    const responseType = response[0]
 
     const responseError = this.checkResponse(response)
 
@@ -146,23 +148,25 @@ class BreezartClient extends EventEmitter {
       callback(responseError)
       return
     }
-    switch (requestType) {
-      case BreezartClient.RequestPrefix.PROPERTIES:
-        this.parseResponseProperties(response)
+
+    let value = null
+    switch (responseType) {
+      case BreezartClient.ResponseType.PROPERTIES:
+        value = this.parseResponseProperties(request, response)
         break
-      case BreezartClient.RequestPrefix.STATE:
-        this.parseResponseStatus(response)
+      case BreezartClient.ResponseType.STATE:
+        value = this.parseResponseStatus(request, response)
         break
-      case BreezartClient.RequestPrefix.SENSORS:
-        this.parseResponseSersorValues(response)
+      case BreezartClient.ResponseType.SENSORS:
+        value = this.parseResponseSersorValues(request, response)
         break
-      case BreezartClient.RequestPrefix.CHANGE_POWER:
-        this.parseResponseSetPower(response)
+      case BreezartClient.ResponseType.OK: // All responses to a request to set values
+        value = this.parseResponseSetValues(request, response)
         break
       default:
         break
     }
-    callback(null)
+    callback(null, value)
   }
 
   toString () {
@@ -184,11 +188,22 @@ class BreezartClient extends EventEmitter {
   }
 
   /**
+   * Split device message to the array
+   * @param {String} message
+   * @returns {String[]}
+   */
+  splitMessage (message) {
+    // Split and fix bug(?) when response has two delimiters with no values, Like `VSens__e6_fb07_fb07_fb07_fb07_fb07_fb07_0`
+    const splittedMessage = message.split(BreezartClient.DELIMITER).filter((v) => { return !!v })
+    return splittedMessage
+  }
+
+  /**
    * Make a request by constructing it, creating a job, and placing it in the queue.
    * Response of that request should be catched in the queue notification about job results
-   * @param {BreezartClient.RequestPrefix} requestType
+   * @param {BreezartClient.RequestType} requestType
    * @param {*} data
-   * @param {(error?: Error | null) => void} callback
+   * @param {(error?: Error | null, value?: number) => void} callback
    */
   makeRequest (requestType, data, callback) {
     const req = this.constructRequest(requestType, data)
@@ -205,7 +220,7 @@ class BreezartClient extends EventEmitter {
           } else {
             // console.debug(`Receive ${response}`)
             // Split and fix bug(?) when response has two delimiters with no values. Like `VSens__e6_fb07_fb07_fb07_fb07_fb07_fb07_0`
-            const parcedResponse = response.split(BreezartClient.DELIMITER).filter((v) => { return !!v })
+            const parcedResponse = this.splitMessage(response)
             const result = {
               request: req,
               response: parcedResponse,
@@ -284,7 +299,7 @@ class BreezartClient extends EventEmitter {
       return error
     }
     return null
-    // TODO: add checks of other responses (`BreezartClient.RequestPrefix`) and emit an error if the prefix is not found
+    // TODO: add checks of other responses (`BreezartClient.ResponseTypes`) and emit an error if the prefix is not found
   }
 
   /**
@@ -293,15 +308,15 @@ class BreezartClient extends EventEmitter {
     @param {(error?: Error | null) => void} callback
   */
   getProperties (callback) {
-    const requestType = BreezartClient.RequestPrefix.PROPERTIES
+    const requestType = BreezartClient.RequestType.GET_PROPERTIES
     this.makeRequest(requestType, null, callback)
   }
 
-  parseResponseProperties (response) {
+  parseResponseProperties (request, response) {
     // The response is an array from `VPr07_bitTempr_bitSpeed_bitHumid_bitMisc_BitPrt_BitVerTPD_BitVerContr`
-    const requestType = BreezartClient.RequestPrefix.PROPERTIES
-    if (response[0] !== requestType) {
-      throw new Error(`Incorrect response received from Breezart. Must be: ${requestType}, but received: ${response[0]}`)
+    const responseType = BreezartClient.ResponseType.PROPERTIES
+    if (response[0] !== responseType) {
+      throw new Error(`Incorrect response received from Breezart. Must be: ${responseType}, but received: ${response[0]}`)
     }
     // bitTempr
     // Bit 7-0 – TempMin – минимально допустимая заданная температура (от 5 до 15)
@@ -350,6 +365,7 @@ class BreezartClient extends EventEmitter {
     this.HiVerTPD = parceBits(response[6], 8, 15)
     // BitVerContr
     this.Firmware_Ver = parceBits(response[7], 0, 15)
+    return null
   }
 
   /**
@@ -357,15 +373,15 @@ class BreezartClient extends EventEmitter {
     @param {(error?: Error | null) => void} callback
   */
   getStatus (callback) {
-    const requestType = BreezartClient.RequestPrefix.STATE
+    const requestType = BreezartClient.RequestType.GET_STATE
     this.makeRequest(requestType, null, callback)
   }
 
-  parseResponseStatus (response) {
+  parseResponseStatus (request, response) {
     // The response is an array from `VSt07_bitState_bitMode_bitTempr_bitHumid_bitSpeed_bitMisc_bitTime_bitDate_bitYear_Msg`
-    const requestType = BreezartClient.RequestPrefix.STATE
-    if (response[0] !== requestType) {
-      throw new Error(`Incorrect response received form Breezart. Must be ${requestType}, but received: ${response[0]}`)
+    const responseType = BreezartClient.ResponseType.STATE
+    if (response[0] !== responseType) {
+      throw new Error(`Incorrect response received form Breezart. Must be ${responseType}, but received: ${response[0]}`)
     }
     // bitState
     // Bit 0 – PwrBtnState – состояние кнопки питания (вкл / выкл).
@@ -480,6 +496,7 @@ class BreezartClient extends EventEmitter {
     this.TimeYear = parceBits(response[9], 8, 15)
     // Msg - текстовое сообщение о состоянии установки длиной от 5 до 70 символов
     this.Msg = response[10]
+    return null
   }
 
   /**
@@ -487,15 +504,15 @@ class BreezartClient extends EventEmitter {
     @param {(error?: Error | null) => void} callback
   */
   getSersorValues (callback) {
-    const requestType = BreezartClient.RequestPrefix.SENSORS
+    const requestType = BreezartClient.RequestType.GET_SENSORS
     this.makeRequest(requestType, null, callback)
   }
 
-  parseResponseSersorValues (response) {
+  parseResponseSersorValues (request, response) {
     // The response is an array from `VSens_TInf_HInf_TRoom_HRoom_TOut_HOut_THF_Pwr`
-    const requestType = BreezartClient.RequestPrefix.SENSORS
-    if (response[0] !== requestType) {
-      throw new Error(`Incorrect response received form Breezart. Must be ${requestType}, but received: ${response[0]}`)
+    const responseType = BreezartClient.ResponseType.SENSORS
+    if (response[0] !== responseType) {
+      throw new Error(`Incorrect response received form Breezart. Must be ${responseType}, but received: ${response[0]}`)
     }
     // TInf signed word – температура воздуха на выходе вентустановки х 10, °С.
     // Диапазон значений от -50,0 до 70,0. При отсутствии корректных данных значение равно 0xFB07
@@ -512,19 +529,21 @@ class BreezartClient extends EventEmitter {
     this.HOut = response[6] === 'fb07' ? null : hexToDec(response[6])
     this.Thf = response[7] === 'fb07' ? null : hexToDec(response[7])
     this.Pwr = response[8] === 'fb07' ? null : hexToDec(response[8])
+
+    return null
   }
 
   /**
    * Get status and sensor values of the instance
-   * @param {(error?: Error | null) => void} callback
+   * @param {(error?: Error | null, value?: number) => void} callback
    */
   getCurrentStatus (callback) {
     this.getStatus((error) => {
       if (error) {
-        callback(error)
+        callback(error, null)
       } else {
         this.getSersorValues((error) => {
-          callback(error)
+          callback(error, null)
         })
       }
     })
@@ -533,7 +552,7 @@ class BreezartClient extends EventEmitter {
   /**
    * Turn on/off the device
    * @param {BreezartClient.DataValues} power
-   * @param {(error?: Error | null) => void} callback
+   * @param {(error?: Error | null, value?: number) => void} callback
    */
   setPower (power, callback) {
     // set power only after status are known
@@ -545,63 +564,140 @@ class BreezartClient extends EventEmitter {
       } else if (!power && (this.UnitState === 0 || this.UnitState === 2)) {
         callback(null)
       } else {
-        const requestType = BreezartClient.RequestPrefix.CHANGE_POWER
+        const requestType = BreezartClient.RequestType.SET_POWER
         const data = BreezartClient.DataValues.POWER_ON
         this.makeRequest(requestType, data, callback)
       }
     })
   }
 
-  parseResponseSetPower (response) {
-    const requestType = BreezartClient.RequestPrefix.CHANGE_POWER
-    if (response[0] !== 'OK' && response[1] !== requestType) {
-      this.emit('error', new Error(`Incorrect response received form Breezart. Must be OK, but received: ${response[0]}`))
+  /**
+   * Fan speed change
+   * @param {number} targetSpeed Target speed for the fan
+   * @param {(error?: Error | null, value?: number) => void} callback
+   */
+  setFanSpeed (targetSpeed, callback) {
+    if (!Number.isInteger(targetSpeed)) {
+      callback(new Error('targetSpeed must be an integer'), null)
+    }
+    if (this.VAVMode || (this.IsRegPressVAV && this.IsRegPressVAV !== 1)) {
+      callback(new Error('VAVMode found. The fan speed can\'t be changed in VAV modes'), null)
+    } else if (targetSpeed > this.SpeedMax || targetSpeed < this.SpeedMin) {
+      callback(new Error(`The target speed must be between ${this.SpeedMin} and ${this.SpeedMax}`), null)
+    } else if (targetSpeed === this.SpeedTarget) {
+      callback(null, targetSpeed)
+    } else {
+      const requestType = BreezartClient.RequestType.SET_FAN_SPEED
+      const data = targetSpeed
+      this.makeRequest(requestType, data, callback)
+    }
+  }
+
+  parseResponseSetValues (request, response) {
+    const req = this.splitMessage(request)
+    if (response[0] !== BreezartClient.ResponseType.OK) {
+      throw new Error(`Incorrect response received form Breezart. Must be OK, but received: ${response[0]}`)
+    }
+    if (req[0] !== response[1]) {
+      throw new Error(`Incorrect response received form Breezart. For the request ${request} was received: ${response}`)
+    }
+    // try convert response array to number array
+    const responseData = response.slice(2)
+    let data = []
+    for (let index = 0; index < responseData.length; index++) {
+      const parsed = parseInt(responseData[index], 10)
+      if (isNaN(parsed)) {
+        this.emit(new Error(`Incorrect response received. Can't convert to number. Response data: ${response}`))
+        return null
+      } else {
+        data.push(parsed)
+      }
+    }
+    if (data.lenght > 1) {
+      return data
+    } else {
+      return data[0]
     }
   }
 }
 
 // Known requests for Breezart
-BreezartClient.RequestPrefix = {
-  STATE: 'VSt07', // Request for state of instance
-  ICONS: 'VScIc', // Icons of scenes (for rev.4.XX return `0`)
-  SENSORS: 'VSens', // Sensor values (for rev.4.XX return `0xFB07`)
-  PROPERTIES: 'VPr07', // Properties of instance
-  VAV_01: 'VZL01', // VAV air flow in zone # `1`
-  VAV_02: 'VZL02', // VAV air flow in zone # `2`
-  VAV_03: 'VZL03', // VAV air flow in zone # `3`
-  VAV_04: 'VZL04', // VAV air flow in zone # `4`
-  VAV_05: 'VZL05', // VAV air flow in zone # `5`
-  VAV_06: 'VZL06', // VAV air flow in zone # `6`
-  VAV_07: 'VZL07', // VAV air flow in zone # `7`
-  VAV_08: 'VZL08', // VAV air flow in zone # `8`
-  VAV_09: 'VZL09', // VAV air flow in zone # `9`
-  VAV_10: 'VZL10', // VAV air flow in zone # `10`
-  VAV_11: 'VZL11', // VAV air flow in zone # `11`
-  VAV_12: 'VZL12', // VAV air flow in zone # `12`
-  VAV_13: 'VZL13', // VAV air flow in zone # `13`
-  VAV_14: 'VZL14', // VAV air flow in zone # `14`
-  VAV_15: 'VZL15', // VAV air flow in zone # `15`
-  VAV_16: 'VZL16', // VAV air flow in zone # `16`
-  VAV_17: 'VZL17', // VAV air flow in zone # `17`
-  VAV_18: 'VZL18', // VAV air flow in zone # `18`
-  VAV_19: 'VZL19', // VAV air flow in zone # `19`
-  VAV_20: 'VZL20', // VAV air flow in zone # `20`
-  SCENE_01: 'VSc01', // Scene # `1`
-  SCENE_02: 'VSc02', // Scene # `2`
-  SCENE_03: 'VSc03', // Scene # `3`
-  SCENE_04: 'VSc04', // Scene # `4`
-  SCENE_05: 'VSc05', // Scene # `5`
-  SCENE_06: 'VSc06', // Scene # `6`
-  SCENE_07: 'VSc07', // Scene # `7`
-  SCENE_08: 'VSc08', // Scene # `8`
-  CHANGE_POWER: 'VWPwr', // Change instance power
-  CHANGE_TEMP: 'VWTmp', // Change instance temperature
-  CHANGE_HUMIDY: 'VWHum', // Change instance humidy
-  CHANGE_FAN_SPEED: 'VWSpd', //
-  CHANGE_VAV_FAN_SPEED: 'VWZon', //
-  ACTIVATE_SCENE: 'VWScn', //
+BreezartClient.RequestType = {
+  GET_STATE: 'VSt07', // Request for state of instance
+  GET_ICONS: 'VScIc', // Icons of scenes (for rev.4.XX return `0`)
+  GET_SENSORS: 'VSens', // Sensor values (for rev.4.XX return `0xFB07`)
+  GET_PROPERTIES: 'VPr07', // Properties of instance
+  GET_VAV_01: 'VZL01', // VAV air flow in zone # `1`
+  GET_VAV_02: 'VZL02', // VAV air flow in zone # `2`
+  GET_VAV_03: 'VZL03', // VAV air flow in zone # `3`
+  GET_VAV_04: 'VZL04', // VAV air flow in zone # `4`
+  GET_VAV_05: 'VZL05', // VAV air flow in zone # `5`
+  GET_VAV_06: 'VZL06', // VAV air flow in zone # `6`
+  GET_VAV_07: 'VZL07', // VAV air flow in zone # `7`
+  GET_VAV_08: 'VZL08', // VAV air flow in zone # `8`
+  GET_VAV_09: 'VZL09', // VAV air flow in zone # `9`
+  GET_VAV_10: 'VZL10', // VAV air flow in zone # `10`
+  GET_VAV_11: 'VZL11', // VAV air flow in zone # `11`
+  GET_VAV_12: 'VZL12', // VAV air flow in zone # `12`
+  GET_VAV_13: 'VZL13', // VAV air flow in zone # `13`
+  GET_VAV_14: 'VZL14', // VAV air flow in zone # `14`
+  GET_VAV_15: 'VZL15', // VAV air flow in zone # `15`
+  GET_VAV_16: 'VZL16', // VAV air flow in zone # `16`
+  GET_VAV_17: 'VZL17', // VAV air flow in zone # `17`
+  GET_VAV_18: 'VZL18', // VAV air flow in zone # `18`
+  GET_VAV_19: 'VZL19', // VAV air flow in zone # `19`
+  GET_VAV_20: 'VZL20', // VAV air flow in zone # `20`
+  GET_SCENE_01: 'VSc01', // Scene # `1`
+  GET_SCENE_02: 'VSc02', // Scene # `2`
+  GET_SCENE_03: 'VSc03', // Scene # `3`
+  GET_SCENE_04: 'VSc04', // Scene # `4`
+  GET_SCENE_05: 'VSc05', // Scene # `5`
+  GET_SCENE_06: 'VSc06', // Scene # `6`
+  GET_SCENE_07: 'VSc07', // Scene # `7`
+  GET_SCENE_08: 'VSc08', // Scene # `8`
+  SET_POWER: 'VWPwr', // Change instance power
+  SET_TEMP: 'VWTmp', // Change instance temperature
+  SET_HUMIDY: 'VWHum', // Change instance humidy
+  SET_FAN_SPEED: 'VWSpd', //
+  SET_VAV_FAN_SPEED: 'VWZon', //
+  SET_SCENE: 'VWScn', //
   SET_DATE_TIME: 'VWSdt', //
   SET_MODE: 'VWFtr' // Set work mode of instance
+}
+BreezartClient.ResponseType = {
+  STATE: BreezartClient.RequestType.GET_STATE,
+  ICONS: BreezartClient.RequestType.GET_ICONS,
+  SENSORS: BreezartClient.RequestType.GET_SENSORS,
+  PROPERTIES: BreezartClient.RequestType.GET_PROPERTIES,
+  VAV_01: BreezartClient.RequestType.GET_VAV_01,
+  VAV_02: BreezartClient.RequestType.GET_VAV_02,
+  VAV_03: BreezartClient.RequestType.GET_VAV_03,
+  VAV_04: BreezartClient.RequestType.GET_VAV_04,
+  VAV_05: BreezartClient.RequestType.GET_VAV_05,
+  VAV_06: BreezartClient.RequestType.GET_VAV_06,
+  VAV_07: BreezartClient.RequestType.GET_VAV_07,
+  VAV_08: BreezartClient.RequestType.GET_VAV_08,
+  VAV_09: BreezartClient.RequestType.GET_VAV_09,
+  VAV_10: BreezartClient.RequestType.GET_VAV_10,
+  VAV_11: BreezartClient.RequestType.GET_VAV_11,
+  VAV_12: BreezartClient.RequestType.GET_VAV_12,
+  VAV_13: BreezartClient.RequestType.GET_VAV_13,
+  VAV_14: BreezartClient.RequestType.GET_VAV_14,
+  VAV_15: BreezartClient.RequestType.GET_VAV_15,
+  VAV_16: BreezartClient.RequestType.GET_VAV_16,
+  VAV_17: BreezartClient.RequestType.GET_VAV_17,
+  VAV_18: BreezartClient.RequestType.GET_VAV_18,
+  VAV_19: BreezartClient.RequestType.GET_VAV_19,
+  VAV_20: BreezartClient.RequestType.GET_VAV_20,
+  SCENE_01: BreezartClient.RequestType.GET_SCENE_01,
+  SCENE_02: BreezartClient.RequestType.GET_SCENE_02,
+  SCENE_03: BreezartClient.RequestType.GET_SCENE_03,
+  SCENE_04: BreezartClient.RequestType.GET_SCENE_04,
+  SCENE_05: BreezartClient.RequestType.GET_SCENE_05,
+  SCENE_06: BreezartClient.RequestType.GET_SCENE_06,
+  SCENE_07: BreezartClient.RequestType.GET_SCENE_07,
+  SCENE_08: BreezartClient.RequestType.GET_SCENE_08,
+  OK: 'OK' // Response to a request to set values
 }
 
 // Known Errors responses for Breezart

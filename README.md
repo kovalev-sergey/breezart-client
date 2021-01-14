@@ -10,6 +10,7 @@ For remote control using this module you must be able  to connect the Breezart r
 > Work in progress. New features will be implemented ASAP.
 
 ## Example
+### Get current status
 ```js
 const BreezartClient = require('../index')
 
@@ -24,7 +25,21 @@ breezart.on('connect', () => {
 
 breezart.connect()
 ```
+### Set fan speed
+```js
+const BreezartClient = require('../index')
 
+let breezart = new BreezartClient({ host: '192.168.0.20', password: 12345 })
+
+breezart.on('connect', () => {
+  breezart.setFanSpeed(5, (err, val) => {
+    console.log(val)
+    breezart.disconnect()
+  })
+})
+
+breezart.connect()
+```
 ## Install
 `npm install breezart-client`
 
@@ -40,7 +55,7 @@ let breezart = new BreezartClient([opts])
 * `password` - password of the Brezzart Vent
 * `port` - not neccessary. Default: 1560
 
-# Properties
+## Properties
 Properties include eponymous properties described in the device [manual](http://breezart.ru/tech/breezart_smart_home.pdf) (rus)
 
 ## Events

@@ -7,7 +7,7 @@ const defaultOptions = {
   port: 1560
 }
 
-class BreezartClient extends EventEmitter {
+class BreezartClient extends EventEmitter.EventEmitter {
   constructor (options) {
     super()
     if (!(options || {}).host) {
@@ -67,7 +67,6 @@ class BreezartClient extends EventEmitter {
     this.Speed = null
     this.SpeedTarget = null
     this.SpeedFact = null
-    this.TempMin = null
     this.ColorMsg = null
     this.ColorInd = null
     this.FilterDust = null
@@ -503,7 +502,7 @@ class BreezartClient extends EventEmitter {
     Get sensor values of instance.
     @param {(error?: Error | null) => void} callback
   */
-  getSersorValues (callback) {
+  getSensorValues (callback) {
     const requestType = BreezartClient.RequestType.GET_SENSORS
     this.makeRequest(requestType, null, callback)
   }
@@ -542,7 +541,7 @@ class BreezartClient extends EventEmitter {
       if (error) {
         callback(error, null)
       } else {
-        this.getSersorValues((error) => {
+        this.getSensorValues((error) => {
           callback(error, null)
         })
       }
@@ -603,11 +602,11 @@ class BreezartClient extends EventEmitter {
     }
     // try convert response array to number array
     const responseData = response.slice(2)
-    let data = []
+    const data = []
     for (let index = 0; index < responseData.length; index++) {
       const parsed = parseInt(responseData[index], 10)
       if (isNaN(parsed)) {
-        this.emit(new Error(`Incorrect response received. Can't convert to number. Response data: ${response}`))
+        this.emit('error', new Error(`Incorrect response received. Can't convert to number. Response data: ${response}`))
         return null
       } else {
         data.push(parsed)
@@ -664,6 +663,7 @@ BreezartClient.RequestType = {
   SET_DATE_TIME: 'VWSdt', //
   SET_MODE: 'VWFtr' // Set work mode of instance
 }
+
 BreezartClient.ResponseType = {
   STATE: BreezartClient.RequestType.GET_STATE,
   ICONS: BreezartClient.RequestType.GET_ICONS,
@@ -724,4 +724,17 @@ BreezartClient.DataValues = {
 // Delimiter for request and data fields
 BreezartClient.DELIMITER = '_'
 
-module.exports = BreezartClient
+function breezartClient (options) {
+  return new BreezartClient(options)
+}
+
+breezartClient.BreezartClient = BreezartClient
+
+// Allows for { fastify }
+breezartClient.breezartClient = breezartClient
+// Allows for strict ES Module support
+breezartClient.default = breezartClient
+// Sets the default export
+module.exports = breezartClient
+// module.exports = { BreezartClient }
+// module.exports.default = BreezartClient

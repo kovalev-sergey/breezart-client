@@ -2,7 +2,7 @@
 process.env.NODE_ENV = 'test'
 
 const expect = require('chai').expect
-const Client = require('../index')
+const Client = require('../index').BreezartClient
 const net = require('net')
 
 // let server

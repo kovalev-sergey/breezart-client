@@ -11,7 +11,7 @@ Changelog
 - Fix: parsing hex from response
 - Other: added workflow for publishing to NPM
 
-## v1.0.1
+## v1.0.0
 
 - Major: initial public release
 - Enhance: released the ability to read all device parameters

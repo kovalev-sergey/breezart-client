@@ -1,6 +1,6 @@
 {
   "name": "breezart-client",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Module to remote control Breezart Vents",
   "main": "index.js",
   "license": "MIT",

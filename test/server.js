@@ -22,11 +22,11 @@ class TestServer {
         this.reqHandler(socket, data)
       })
       socket.on('end', () => {
-        console.log('server socket end')
+        console.debug('server socket end')
       })
 
       socket.on('error', () => {
-        console.log('server socket error')
+        console.debug('server socket error')
       })
     })
     this.server.on('error', err => {
@@ -100,7 +100,7 @@ class TestServer {
         break
       }
       case 'VWTmp': { // set temp
-        const tempTarget = hexToDec(Number(req[2]))
+        const tempTarget = hexToDec(req[2])
         if (Number.isNaN(tempTarget)) {
           socket.write('VEDat_E1')
         } else if (tempTarget > 44) {
@@ -112,19 +112,30 @@ class TestServer {
         }
         break
       }
+      case 'VWPwr': { // set power
+        const powerTarget = hexToDec(req[2])
+        if (Number.isNaN(powerTarget)) {
+          socket.write('VEDat_E1')
+        } else if ((powerTarget !== 10) && (powerTarget !== 11)) {
+          socket.write('VECd2_VWPwr')
+        } else {
+          socket.write(`OK_VWPwr_${decToHex(powerTarget)}`)
+        }
+        break
+      }
       default:
         break
     }
   }
 
   async start () {
-    console.log('start server')
+    console.log('Test server start')
     this.server.listen(0, 'localhost')
     return once(this.server, 'listening')
   }
 
   async stop () {
-    console.log('stop server')
+    console.log('Test server stop')
     this.server.close()
     for (const key in this.connections) {
       console.log(`The client ${key} did not disconnect. Force close.`)

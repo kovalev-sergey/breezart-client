@@ -3,6 +3,8 @@ const { decToHex, parceBits, hexToDecSign, hexToDec } = require('./util/hex')
 const queue = require('queue')
 const EventEmitter = require('events')
 
+const CONNECTION_TIMEOUT = 5000
+
 const defaultOptions = {
   port: 1560
 }
@@ -99,6 +101,7 @@ class BreezartClient extends EventEmitter.EventEmitter {
     })
 
     this.connection = new net.Socket()
+    this.connection.setTimeout(CONNECTION_TIMEOUT)
 
     this.connection.on('connect', () => {
       this.connected = true
@@ -116,11 +119,16 @@ class BreezartClient extends EventEmitter.EventEmitter {
       this.commands.autostart = false
       this.commands.stop()
       this.connected = false
+      console.debug('Connection status: socket close')
+      this.emit('disconnect')
     })
 
     this.connection.on('timeout', () => {
       this.connected = false
-      // console.debug('Connection status: socket timeout')
+      console.debug('Connection status: socket timeout')
+      this.connection.destroy(error => {
+        this.emit('error', error)
+      })
       this.disconnect()
     })
   }
@@ -283,7 +291,6 @@ class BreezartClient extends EventEmitter.EventEmitter {
     this.commands.stop()
     this.connection.end()
     this.connected = false
-    this.emit('disconnect')
   }
 
   /**

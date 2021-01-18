@@ -1,6 +1,6 @@
 const net = require('net')
 const { once } = require('events')
-const { hexToDec, isHex } = require('../util/hex')
+const { hexToDec, isHex, decToHex } = require('../util/hex')
 
 const RESP_PROPERTIES = [
   'VPr07',
@@ -79,7 +79,7 @@ class TestServer {
     }
 
     const cmd = req[0]
-    // handle a Properties
+    // handle a  specific command
     switch (cmd) {
       case 'VPr07': { // properties
         const res = RESP_PROPERTIES.join('_')
@@ -96,6 +96,19 @@ class TestServer {
           socket.write('VEDat_L1')
         } else {
           socket.write(`OK_VWSpd_${speedTarget}`)
+        }
+        break
+      }
+      case 'VWTmp': { // set temp
+        const tempTarget = hexToDec(Number(req[2]))
+        if (Number.isNaN(tempTarget)) {
+          socket.write('VEDat_E1')
+        } else if (tempTarget > 44) {
+          socket.write('VEDat_H1')
+        } else if (tempTarget < 6) {
+          socket.write('VEDat_L1')
+        } else {
+          socket.write(`OK_VWTmp_${decToHex(tempTarget)}`)
         }
         break
       }

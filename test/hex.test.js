@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 process.env.NODE_ENV = 'test'
 
-const { decToHex, hexToDec, decToHexSign, hexToDecSign, parceBits } = require('../util/hex')
+const { decToHex, hexToDec, decToHexSign, hexToDecSign, parceBits, isHex } = require('../util/hex')
 const expect = require('chai').expect
 
 describe('Check hex to dec to hex converting', () => {
@@ -41,5 +41,16 @@ describe('Check hex to dec to hex converting', () => {
     expect(parceBits('841', 0)).have.to.be.equal(1)
     expect(parceBits('841', 11)).have.to.be.equal(1)
     expect(parceBits('841', 15)).have.to.be.equal(0)
+  })
+})
+
+describe('Check string to hex', () => {
+  it('lenght must be between 1 and 4 symbols', () => {
+    expect(isHex('1')).have.to.be.equal(true)
+    expect(isHex('12345')).have.to.be.equal(false)
+    expect(isHex('1234')).have.to.be.equal(true)
+    expect(isHex('FFFF')).have.to.be.equal(true)
+    expect(isHex('AAAAA')).have.to.be.equal(false)
+    expect(isHex('HAAA')).have.to.be.equal(false)
   })
 })

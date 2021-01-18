@@ -1,3 +1,14 @@
+const reHex = /^[0-9A-Fa-f]{1,4}$/g
+
+/**
+ * Checks that the string is a hex number
+ * @param {string} hex string of hex number
+ */
+exports.isHex = function (hex) {
+  reHex.lastIndex = 0
+  return reHex.test(hex)
+}
+
 exports.decToHex = function (dec) {
   if (!Number.isInteger(dec) || dec < 0 || dec > 65535) {
     throw new Error('Value must be a positive integer and less than 65535')

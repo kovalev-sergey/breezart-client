@@ -189,7 +189,7 @@ class BreezartClient extends EventEmitter.EventEmitter {
     req.push(requestType)
     req.push(decToHex(this.options.password))
     if (data) {
-      req.push(data)
+      req.push(decToHex(data))
     }
     return req.join(BreezartClient.DELIMITER)
   }
@@ -599,6 +599,26 @@ class BreezartClient extends EventEmitter.EventEmitter {
     }
   }
 
+  /**
+   * Target temperature change
+   * @param {number} targetTemperature Target temperature
+   * @param {(error?: Error | null, value?: number) => void} callback
+   */
+  setTemperature (targetTemperature, callback) {
+    if (!Number.isInteger(targetTemperature)) {
+      callback(new Error('targetTemperature must be an integer'), null)
+    }
+    if (targetTemperature > this.TempMax || targetTemperature < this.TempMin) {
+      callback(new Error(`The target temperature must be between ${this.TempMin} and ${this.TempMax}`), null)
+    } else if (targetTemperature === this.TemperTarget) {
+      callback(null, targetTemperature)
+    } else {
+      const requestType = BreezartClient.RequestType.SET_TEMP
+      const data = targetTemperature
+      this.makeRequest(requestType, data, callback)
+    }
+  }
+
   parseResponseSetValues (request, response) {
     const req = this.splitMessage(request)
     if (response[0] !== BreezartClient.ResponseType.OK) {
@@ -611,7 +631,7 @@ class BreezartClient extends EventEmitter.EventEmitter {
     const responseData = response.slice(2)
     const data = []
     for (let index = 0; index < responseData.length; index++) {
-      const parsed = parseInt(responseData[index], 10)
+      const parsed = hexToDec(responseData[index])
       if (isNaN(parsed)) {
         this.emit('error', new Error(`Incorrect response received. Can't convert to number. Response data: ${response}`))
         return null

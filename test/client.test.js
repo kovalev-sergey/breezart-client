@@ -85,7 +85,7 @@ describe('Connection test', () => {
   })
 })
 
-describe('Fan speed test', () => {
+describe('Set fan speed test', () => {
   const local = new TestServer()
 
   beforeEach(async () => {
@@ -179,6 +179,49 @@ describe('Error emitting test', () => {
       cl.disconnect()
     })
     cl.on('disconnect', () => done())
+    cl.connect()
+  })
+})
+
+describe('Set temp test', () => {
+  const local = new TestServer()
+
+  beforeEach(async () => {
+    await local.start()
+  })
+
+  afterEach(async () => {
+    return local.stop()
+  })
+  it('change temp', function (done) {
+    this.timeout(3000)
+    const cl = new Client(local.connectionOptions)
+    cl.on('connect', () => {
+      const targetTemp = 25
+      cl.setTemperature(targetTemp, (err, val) => {
+        expect(err).have.to.be.equal(null)
+        expect(val).have.to.be.equal(25)
+        cl.disconnect()
+      })
+    })
+    cl.on('disconnect', () => done())
+    cl.on('error', err => console.log(err))
+    cl.connect()
+  })
+
+  it('change temp with wrong val', function (done) {
+    this.timeout(3000)
+
+    const cl = new Client(local.connectionOptions)
+    cl.on('connect', () => {
+      const targetSpeed = 55
+      cl.setTemperature(targetSpeed, (err) => {
+        expect(err.message).have.to.be.equal('The target temperature must be between 6 and 44')
+        cl.disconnect()
+      })
+    })
+    cl.on('disconnect', () => done())
+    cl.on('error', err => console.log(err))
     cl.connect()
   })
 })

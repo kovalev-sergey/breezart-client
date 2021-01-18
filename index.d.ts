@@ -122,6 +122,12 @@ declare module 'breezart-client' {
      * @param {BreezartCallback} callback
      */
     setFanSpeed(targetSpeed: number, callback: BreezartCallback): void;
+    /**
+     * Temperature change
+     * @param {number} targetTemperature Target temperature
+     * @param {BreezartCallback} callback
+     */
+    setTemperature(targetTemperature: number, callback: BreezartCallback): void;
 
   }
 

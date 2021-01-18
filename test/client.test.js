@@ -35,7 +35,6 @@ describe('Split device message', () => {
     const cl = new Client({ host: '127.0.0.1', password: 65535 })
     const mes = 'VSens__e6_fb07_fb07_fb07_fb07_fb07_fb07_0' // the two '_' in the response may be a bug or may not be
     const req = cl.splitMessage(mes)
-    console.log(req)
     expect(req.length).have.to.be.equal(9)
   })
 })
@@ -179,6 +178,51 @@ describe('Error emitting test', () => {
       cl.disconnect()
     })
     cl.on('disconnect', () => done())
+    cl.connect()
+  })
+})
+
+describe('Set power test', () => {
+  const local = new TestServer()
+
+  beforeEach(async () => {
+    await local.start()
+  })
+
+  afterEach(async () => {
+    return local.stop()
+  })
+  it('power on', function (done) {
+    this.timeout(3000)
+    const cl = new Client(local.connectionOptions)
+    cl.PwrBtnState = 0
+    cl.on('connect', () => {
+      const targetPowerOn = true
+      cl.setPowerOn(targetPowerOn, (err, val) => {
+        expect(err).have.to.be.equal(null)
+        expect(val).have.to.be.equal(true)
+        cl.disconnect()
+      })
+    })
+    cl.on('disconnect', () => done())
+    cl.on('error', err => console.log(err))
+    cl.connect()
+  })
+
+  it('power off', function (done) {
+    this.timeout(3000)
+    const cl = new Client(local.connectionOptions)
+    cl.PwrBtnState = 1
+    cl.on('connect', () => {
+      const targetPowerOn = false
+      cl.setPowerOn(targetPowerOn, (err, val) => {
+        expect(err).have.to.be.equal(null)
+        expect(val).have.to.be.equal(false)
+        cl.disconnect()
+      })
+    })
+    cl.on('disconnect', () => done())
+    cl.on('error', err => console.log(err))
     cl.connect()
   })
 })

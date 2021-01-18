@@ -119,7 +119,6 @@ class BreezartClient extends EventEmitter.EventEmitter {
       this.commands.autostart = false
       this.commands.stop()
       this.connected = false
-      console.debug('Connection status: socket close')
       this.emit('disconnect')
     })
 
@@ -242,6 +241,7 @@ class BreezartClient extends EventEmitter.EventEmitter {
   }
 
   send (req, cb) {
+    // console.debug('request:', req)
     this.connection.write(req, () => {
       let response = ''
       this.connection.on('data', sendHandler)
@@ -257,6 +257,7 @@ class BreezartClient extends EventEmitter.EventEmitter {
       const that = this
       function sendHandler (data) {
         response = data.toString()
+        // console.debug('response:', response)
         that.emit('data', response)
         self.removeListener('data', sendHandler)
         clearTimeout(timeout)
@@ -556,28 +557,6 @@ class BreezartClient extends EventEmitter.EventEmitter {
   }
 
   /**
-   * Turn on/off the device
-   * @param {BreezartClient.DataValues} power
-   * @param {(error?: Error | null, value?: number) => void} callback
-   */
-  setPower (power, callback) {
-    // set power only after status are known
-    this.getStatus((error) => {
-      if (error) {
-        callback(error)
-      } else if (power && (this.UnitState === 1 || this.UnitState === 3)) {
-        callback(null)
-      } else if (!power && (this.UnitState === 0 || this.UnitState === 2)) {
-        callback(null)
-      } else {
-        const requestType = BreezartClient.RequestType.SET_POWER
-        const data = BreezartClient.DataValues.POWER_ON
-        this.makeRequest(requestType, data, callback)
-      }
-    })
-  }
-
-  /**
    * Fan speed change
    * @param {number} targetSpeed Target speed for the fan
    * @param {(error?: Error | null, value?: number) => void} callback
@@ -619,6 +598,28 @@ class BreezartClient extends EventEmitter.EventEmitter {
     }
   }
 
+  /**
+   * Power On/Off
+   * @param {boolean} targetPowerState Target power state
+   * @param {(error?: Error | null, value?: number) => void} callback
+   */
+  setPowerOn (targetPowerState, callback) {
+    let newState = 0
+    if (targetPowerState) {
+      newState = 1
+    }
+    if (newState === this.PwrBtnState) {
+      callback(null, !!newState)
+    } else {
+      const requestType = BreezartClient.RequestType.SET_POWER
+      let data = BreezartClient.POWER_STATES.POWER_OFF
+      if (newState) {
+        data = BreezartClient.POWER_STATES.POWER_ON
+      }
+      this.makeRequest(requestType, data, callback)
+    }
+  }
+
   parseResponseSetValues (request, response) {
     const req = this.splitMessage(request)
     if (response[0] !== BreezartClient.ResponseType.OK) {
@@ -627,6 +628,7 @@ class BreezartClient extends EventEmitter.EventEmitter {
     if (req[0] !== response[1]) {
       throw new Error(`Incorrect response received form Breezart. For the request ${request} was received: ${response}`)
     }
+
     // try convert response array to number array
     const responseData = response.slice(2)
     const data = []
@@ -639,6 +641,12 @@ class BreezartClient extends EventEmitter.EventEmitter {
         data.push(parsed)
       }
     }
+
+    // Power control has a specific answer. For this case return a boolean value
+    if (response[1] === BreezartClient.RequestType.SET_POWER) {
+      return data[0] === BreezartClient.POWER_STATES.POWER_ON
+    }
+
     if (data.lenght > 1) {
       return data
     } else {
@@ -743,9 +751,9 @@ BreezartClient.ErrorPrefix = {
 }
 
 // Data values for shange requests
-BreezartClient.DataValues = {
-  POWER_ON: 1,
-  POWER_OFF: 2
+BreezartClient.POWER_STATES = {
+  POWER_ON: 11, // must be 11 in dec
+  POWER_OFF: 10 // must be 10 in dec
 }
 
 // Delimiter for request and data fields

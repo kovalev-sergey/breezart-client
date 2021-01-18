@@ -129,6 +129,13 @@ declare module 'breezart-client' {
      */
     setTemperature(targetTemperature: number, callback: BreezartCallback): void;
 
+    /**
+     * Power On/Off
+     * @param targetPowerState turn on - `true`, turn off - `false`
+     * @param callback 
+     */
+    setPowerOn(targetPowerState: boolean, callback: BreezartCallback): void;
+
   }
 
   export { BreezartClient, BreezartDeviceConfig, BreezartCallback, BreezartEventTypes };

@@ -3,8 +3,6 @@ const { decToHex, parceBits, hexToDecSign, hexToDec } = require('./util/hex')
 const queue = require('queue')
 const EventEmitter = require('events')
 
-const CONNECTION_TIMEOUT = 5000
-
 const defaultOptions = {
   port: 1560
 }
@@ -101,7 +99,6 @@ class BreezartClient extends EventEmitter.EventEmitter {
     })
 
     this.connection = new net.Socket()
-    this.connection.setTimeout(CONNECTION_TIMEOUT)
 
     this.connection.on('connect', () => {
       this.connected = true
@@ -122,13 +119,8 @@ class BreezartClient extends EventEmitter.EventEmitter {
       this.emit('disconnect')
     })
 
-    this.connection.on('timeout', () => {
-      this.connected = false
-      console.debug('Connection status: socket timeout')
-      this.connection.destroy(error => {
-        this.emit('error', error)
-      })
-      this.disconnect()
+    this.connection.on('error', err => {
+      this.emit('error', err)
     })
   }
 
@@ -248,7 +240,6 @@ class BreezartClient extends EventEmitter.EventEmitter {
       const timeout = setTimeout(() => {
         if (response === '') {
           this.connection.removeListener('data', sendHandler)
-          this.emit('timeout')
           cb(new Error(`Response for ${req} not received`))
         }
       }, 3000)
@@ -266,24 +257,13 @@ class BreezartClient extends EventEmitter.EventEmitter {
     })
   }
 
-  connect (connectionParams, attempts) {
+  connect () {
     // Create connection and start queue requests processing
-    const defParams = {
+    const params = {
       host: this.options.host,
       port: this.options.port
     }
-    const params = Object.assign(defParams, connectionParams)
-    // Calc timeout for next attempt
-    attempts = (attempts || 0) < 8 ? (attempts || 0) : 8
-    const timeout = 1000 * Math.pow(2, attempts)
-    this.connection.once('error', () => {
-      this.connection.end()
-      setTimeout((t, a) => {
-        this.emit('error', new Error(`Connection failed: Reconnecting after ${t / 1000} seconds`))
-        this.connect(connectionParams, attempts)
-      }, timeout, timeout, attempts++)
-    })
-    console.debug('Connecting to Breezart...', params.host, params.port)
+    console.debug(`Connecting to Breezart ${params.host}:${params.port}...`)
     this.connection.connect(params)
   }
 

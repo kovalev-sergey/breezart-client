@@ -63,7 +63,6 @@ Properties include eponymous properties described in the device [manual](http://
 ## Events
 `connect` - Emitted when a connection is successfully established.\
 `error` - Emitted when an error occurs.  \
-`timeout` - Emitted if a response has not been received within 3 seconds. This is only to notify. \
 `data` - Emitted when data is received. \
 `disconnect` - Emitted when a connection is disconnected.
 

@@ -56,7 +56,7 @@ describe('Connection test', () => {
     cl.on('connect', () => {
       expect(cl.TempMin).have.to.be.equal(6)
       expect(cl.TempMax).have.to.be.equal(44)
-      expect(cl.SpeedMin).have.to.be.equal(6)
+      expect(cl.SpeedMin).have.to.be.equal(2)
       expect(cl.SpeedMax).have.to.be.equal(9)
       expect(cl.HumidMin).have.to.be.equal(1)
       expect(cl.HumidMax).have.to.be.equal(99)
@@ -115,9 +115,9 @@ describe('Set fan speed test', () => {
 
     const cl = new Client(local.connectionOptions)
     cl.on('connect', () => {
-      const targetSpeed = 5
+      const targetSpeed = 1
       cl.setFanSpeed(targetSpeed, (err) => {
-        expect(err.message).have.to.be.equal('The target speed must be between 6 and 9')
+        expect(err.message).have.to.be.equal('The target speed must be between 2 and 9')
         cl.disconnect()
       })
     })

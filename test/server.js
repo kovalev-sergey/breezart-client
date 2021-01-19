@@ -5,7 +5,7 @@ const { hexToDec, isHex, decToHex } = require('../util/hex')
 const RESP_PROPERTIES = [
   'VPr07',
   '2C06', // TempMin = 6, TempMax = 44 (0010 1100 0000 0110)
-  '906', // SpeedMin = 6, SpeedMax = 9 (0000 1001 0000 0110)
+  '902', // SpeedMin = 2, SpeedMax = 9 (0000 1001 0000 0110)
   '6301', // HumidMin = 1, HumidMax = 99 (0110 0011 0000 0001)
   'D413', // NVAVZone = 19, reserv[5,7] = 0, VAVMode = 0, IsRegPressVAV = 0, IsShowHum = 1, IsCascRegT = 0, IsCascRegH = 1, IsHumid = 0, IsCooler = 1, IsAuto = 1 (1101 0100 0001 0011)
   'FE02', // ProtSubVers = 2, ProtVers = 254 (1111 1110 0000 0010)
@@ -13,8 +13,38 @@ const RESP_PROPERTIES = [
   'EA60' // Firmware_Ver = 60000 (1110 1010 0110 0000)
 ]
 
+const RESP_STATE = [
+  'VSt07',
+  '841', // PwrBtnState = 1,  0000 0000 0100 0001
+  '5005',
+  '181a',
+  '3202',
+  '2844', // bitSpeed
+  '285',
+  '100e',
+  '112',
+  '1501',
+  'Работа  '
+]
+
+const RESP_SENSOR = [
+  'VSens',
+  '',
+  '106',
+  'fb07',
+  'fb07',
+  'fb07',
+  'fb07',
+  'fb07',
+  'fb07',
+  '44c'
+]
+
 class TestServer {
-  constructor () {
+  constructor (options) {
+    if (!options) options = {}
+    this._port = options.port || 0
+    this._password = options.password || 38734 // like random
     this.connections = {}
     this._forceResponse = null // overrider
     this.server = net.createServer((socket) => {
@@ -37,6 +67,8 @@ class TestServer {
       const key = socket.remoteAddress + ':' + socket.remotePort
       this.connections[key] = socket
 
+      console.debug('server socket connect')
+
       socket.on('close', () => {
         console.log('server socket close')
         delete this.connections[key]
@@ -56,6 +88,7 @@ class TestServer {
       return
     }
 
+    console.log('recive:', data.toString())
     // Check the req stucture
     const req = data.toString().split('_')
     if (req.lenght < 2) {
@@ -86,13 +119,23 @@ class TestServer {
         socket.write(res)
         break
       }
+      case 'VSt07': { // state
+        const res = RESP_STATE.join('_')
+        socket.write(res)
+        break
+      }
+      case 'VSens': { // sensors
+        const res = RESP_SENSOR.join('_')
+        socket.write(res)
+        break
+      }
       case 'VWSpd': { // set fan speed
         const speedTarget = Number(req[2])
         if (Number.isNaN(speedTarget)) {
           socket.write('VEDat_E1')
         } else if (speedTarget > 9) {
           socket.write('VEDat_H1')
-        } else if (speedTarget < 6) {
+        } else if (speedTarget < 2) {
           socket.write('VEDat_L1')
         } else {
           socket.write(`OK_VWSpd_${speedTarget}`)
@@ -119,6 +162,8 @@ class TestServer {
         } else if ((powerTarget !== 10) && (powerTarget !== 11)) {
           socket.write('VECd2_VWPwr')
         } else {
+          // change prw status in server
+          RESP_STATE[1] = powerTarget === 10 ? '840' : '841'
           socket.write(`OK_VWPwr_${decToHex(powerTarget)}`)
         }
         break
@@ -130,7 +175,7 @@ class TestServer {
 
   async start () {
     console.log('Test server start')
-    this.server.listen(0, 'localhost')
+    this.server.listen(this._port, 'localhost')
     return once(this.server, 'listening')
   }
 
@@ -153,7 +198,7 @@ class TestServer {
   }
 
   get password () {
-    return 38734 // like random
+    return this._password
   }
 
   get connectionOptions () {
